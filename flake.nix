@@ -162,19 +162,20 @@
       # outputs keyed with `<system>`:
 
       devShells = {};
-      apps = {
-        python = let
-          pyi = py.withPackages (p: with p; [ pytorch-bin ]);
-        in { type = "app"; program = lib.getExe pyi; };
+      apps = let
+        pyi = py.withPackages (p: with p; [ pytorch-bin ]);
+      in {
+        python = { type = "app"; program = lib.getExe pyi; };
+
+        example = {
+          type = "app";
+          program = lib.getExe (
+            np.writeScriptBin "example" "${lib.getExe pyi} ${./example.py}"
+          );
+        };
       };
       packages = {
         inherit (np) hello;
-        /*
-        hello = np.hello.overrideDerivation (_: {
-          huh = " ";
-          NIX_DEBUG = 4;
-        });
-        */
 
         inherit (py.pkgs) pytorch-bin;
         python = py.withPackages (p: with p; [ pytorch-bin ]);
