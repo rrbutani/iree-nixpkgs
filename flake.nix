@@ -103,8 +103,26 @@
             propagatedBuildInputs = with py-final; old.propagatedBuildInputs ++ [
               networkx # new dep
               sympy # new dep
+
+              # torch inductor depends on this but this isn't in setup.py...
+              filelock
             ];
 
+            # inductor uses a C++ compiler at runtime; we want it to default
+            # to using the C++ compiler in our target's stdenv
+            postFixup = let
+              # TODO: is this right for cross compilation? needs testing
+              #
+              # I _think_, since the target platform compiler (i.e. the compiler
+              # that runs on the target platform and produces binaries for the
+              # target platform) is never a cross compiler, it does not have a
+              # prefix.
+              cxxCompilerPath = "${final.targetPackages.stdenv.cc}/bin/c++";
+
+              # echo "cpp.cxx = (\"$(realpath "$(which $CC)")\",) + cpp.cxx" \
+            in old.postFixup + ''
+              echo "cpp.cxx = (\"${cxxCompilerPath}\",) + cpp.cxx" \
+                >> $out/${py-final.python.sitePackages}/torch/_inductor/config.py
             '';
           }))
         ];
