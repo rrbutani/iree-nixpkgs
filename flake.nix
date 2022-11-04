@@ -32,6 +32,90 @@
       };
     };
 
+    pythonPackageOverrides = final: prev: let
+      packageOverrides = py-final: py-prev: {
+        # We want a specific pytorch version but don't need to add in our own
+        # patches or modifications so we just override the source of the (very
+        # convenient) bin variant of the pytorch package:
+        #
+        # See: https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torch/bin.nix
+        pytorch-bin = let
+          # TODO(upstream): upstream the `versionOverride` changes
+          versionOverride = let
+            version = "1.14.0.dev20221104"; # remember to update the hashes!
+
+            # Note: we're *not* using the CUDA versions.
+            baseUrl = "https://download.pytorch.org/whl/nightly/cpu";
+
+            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev20221104-cp39-none-macosx_11_0_arm64.whl
+            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev20221104-cp37-none-macosx_10_9_x86_64.whl
+            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev20221101%2Bcpu-cp37-cp37m-linux_x86_64.whl
+            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev20221101%2Bcpu-cp38-cp38-linux_x86_64.whl
+            #
+            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev2022104-cp310-cp310-linux_x86_64.whl
+            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev2022104%2Bcpu-cp310-cp310-linux_x86_64.whl
+
+            name = { pyi, os, arch }: "torch-${version}${pyi}-${os}_${arch}.whl";
+            url = args: baseUrl + "/" + (name args);
+
+            source = arch: os: py: hash: let
+              pyi = if os == "darwin" then
+                  "-cp${py}-none"
+                else
+                  if py == "37" then "%2Bcpu-cp37-cp37m" else "%2Bcpu-cp${py}-cp${py}";
+              arch' = if arch == "aarch64" then "arm64" else arch;
+              os' = if os == "darwin" then
+                  if arch == "aarch64" then "macosx_11_0" else "macosx_10_9"
+                else os;
+              args = { inherit pyi; os = os'; arch = arch'; };
+            in {
+              "${arch}-${os}-${py}" = {
+                name = name args;
+                url = url args;
+                inherit hash;
+              };
+            };
+          in {
+            inherit version;
+            sources =
+              (source "x86_64" "linux" "37" "") //
+              (source "x86_64" "linux" "38" "") //
+              (source "x86_64" "linux" "39" "") //
+              (source "x86_64" "linux" "310" "sha256-t8b/e4QNUF1yjQCr2c6DRZYkgVI8tNNai8uIULXr9Uc=") //
+
+              (source "x86_64" "darwin" "37" "") //
+              (source "x86_64" "darwin" "38" "") //
+              (source "x86_64" "darwin" "39" "") //
+              (source "x86_64" "darwin" "310" "") //
+
+              (source "aarch64" "darwin" "37" "") //
+              (source "aarch64" "darwin" "38" "") //
+              (source "aarch64" "darwin" "39" "") //
+              (source "aarch64" "darwin" "310" "") //
+              {};
+          };
+        in lib.pipe ./pkgs/pytorch-bin.nix [
+          (path: py-final.callPackage path {
+            inherit versionOverride;
+          })
+
+          (pkg: pkg.overridePythonAttrs (old: {
+            propagatedBuildInputs = with py-final; old.propagatedBuildInputs ++ [
+              networkx # new dep
+              sympy # new dep
+            ];
+
+            '';
+          }))
+        ];
+      };
+    in {
+      python37 = prev.python37.override { inherit packageOverrides; };
+      python38 = prev.python38.override { inherit packageOverrides; };
+      python39 = prev.python39.override { inherit packageOverrides; };
+      python310 = prev.python310.override { inherit packageOverrides; };
+    };
+
     sysSpecific = flu.lib.eachDefaultSystem (system: let
       np = import nixpkgs {
         inherit system;
