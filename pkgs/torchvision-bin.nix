@@ -10,13 +10,28 @@
 , pillow
 , python
 , torch-bin
+
+# ```
+# {
+#   version = "0.13.1";
+#   # Table in the style of `./binary-hashes.nix`
+#   sources = {
+#     x86_64-linux-37 = {
+#       name = "...";
+#       url = "...";
+#       hash = "...";
+#     };
+#   };
+# }
+# ```
+, versionOverride ? { }
 }:
 
 let
   pyVerNoDot = builtins.replaceStrings [ "." ] [ "" ] python.pythonVersion;
-  srcs = import ./binary-hashes.nix version;
+  srcs = versionOverride.sources or (import ./binary-hashes.nix version);
   unsupported = throw "Unsupported system";
-  version = "0.13.1";
+  version = versionOverride.version or "0.13.1";
 in buildPythonPackage {
   inherit version;
 
