@@ -43,7 +43,7 @@ Staging ground for IREE and friends packaged with `nix`.
 
   - [x] add an option for using custom wheels to `pytorchvision-bin`
     + [x] test `_dyanmo`, `functorch`, `_inductor`
-  - [ ] add an option for using custom wheels to `torchvision-bin`
+  - [x] add an option for using custom wheels to `torchvision-bin`
   - [ ] `torchtext`
     * See: https://github.com/NixOS/nixpkgs/pull/160207/files
   - [ ] `torchtext-bin` with an option for using custom wheels

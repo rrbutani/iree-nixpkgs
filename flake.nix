@@ -117,6 +117,27 @@
             '';
           }))
         ];
+
+        # Same for `torchvision`:
+        torchvision-bin = let
+          versionOverride = let
+            version = torchvisionVersion;
+            inherit (pytorchWheelUrlGen {
+              packageName = "torchvision"; inherit version;
+            }) source;
+          in {
+            inherit version;
+            sources =
+              (source "x86_64" "linux" "310" "sha256-iO7fZdsVwEHud2b4+p/t39en+Zc/fO6VYipdyqQaTXY=") //
+              (source "x86_64" "darwin" "310" "") //
+              (source "aarch64" "darwin" "310" "");
+          };
+          # TODO(upstream): upstream the `versionOverride` changes
+        in lib.pipe ./pkgs/torchvision-bin.nix [
+          (path: py-final.callPackage path {
+            inherit versionOverride;
+          })
+        ];
       };
     in {
       python37 = prev.python37.override { inherit packageOverrides; };
@@ -155,7 +176,9 @@
       devShells = {};
       apps = let
         pyi = py.withPackages (p: with p; [
-          torch-bin
+          torch-bin torchvision-bin
+
+          requests
         ]);
       in {
         python = { type = "app"; program = lib.getExe pyi; };
@@ -170,7 +193,7 @@
       packages = {
         inherit (np) hello;
 
-        inherit (py.pkgs) torch-bin;
+        inherit (py.pkgs) torch-bin torchvision-bin;
       };
       checks = {};
 
