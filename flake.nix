@@ -33,40 +33,51 @@
     };
 
     pythonPackageOverrides = final: prev: let
+      pytorchWheelUrlGen = {
+        packageName ? "torch",
+        version,
+        # Note: we're *not* using the CUDA versions.
+        baseUrl ? "https://download.pytorch.org/whl/nightly/cpu"
+      }: rec {
+        name = { pyi, os, arch }: "${packageName}-${version}${pyi}-${os}_${arch}.whl";
+        url = args: baseUrl + "/" + (name args);
+        source = arch: os: py: hash: let
+          pyi = if os == "darwin" && packageName == "torch" then
+              "-cp${py}-none"
+            else let
+              ext = if py == "37" then "m" else "";
+              pre = if os == "linux" then "%2Bcpu" else "";
+            in pre + "-cp${py}-cp${py}" + ext;
+          arch' = if arch == "aarch64" then "arm64" else arch;
+          os' = if os == "darwin" then
+              if arch == "aarch64" then "macosx_11_0" else "macosx_10_9"
+            else os;
+          args = { inherit pyi; os = os'; arch = arch'; };
+        in {
+          "${arch}-${os}-${py}" = {
+            name = name args;
+            url = url args;
+            inherit hash;
+          };
+        };
+      };
+
+      torchVersion = "1.14.0.dev20221104"; # remember to update the hashes!
+      torchvisionVersion = "0.15.0.dev20221104"; # remember to update the hashes!
+
       packageOverrides = py-final: py-prev: {
         # We want a specific pytorch version but don't need to add in our own
         # patches or modifications so we just override the source of the (very
         # convenient) bin variant of the pytorch package:
         #
         # See: https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torch/bin.nix
-        pytorch-bin = let
+        torch-bin = let
           # TODO(upstream): upstream the `versionOverride` changes
           versionOverride = let
-            version = "1.14.0.dev20221104"; # remember to update the hashes!
-
-            # Note: we're *not* using the CUDA versions.
-            baseUrl = "https://download.pytorch.org/whl/nightly/cpu";
-
-            name = { pyi, os, arch }: "torch-${version}${pyi}-${os}_${arch}.whl";
-            url = args: baseUrl + "/" + (name args);
-
-            source = arch: os: py: hash: let
-              pyi = if os == "darwin" then
-                  "-cp${py}-none"
-                else
-                  if py == "37" then "%2Bcpu-cp37-cp37m" else "%2Bcpu-cp${py}-cp${py}";
-              arch' = if arch == "aarch64" then "arm64" else arch;
-              os' = if os == "darwin" then
-                  if arch == "aarch64" then "macosx_11_0" else "macosx_10_9"
-                else os;
-              args = { inherit pyi; os = os'; arch = arch'; };
-            in {
-              "${arch}-${os}-${py}" = {
-                name = name args;
-                url = url args;
-                inherit hash;
-              };
-            };
+            version = torchVersion;
+            inherit (pytorchWheelUrlGen {
+              packageName = "torch"; inherit version;
+            }) source;
           in {
             inherit version;
             sources =
@@ -74,7 +85,7 @@
               (source "x86_64" "darwin" "310" "") //
               (source "aarch64" "darwin" "310" "");
           };
-        in lib.pipe ./pkgs/pytorch-bin.nix [
+        in lib.pipe ./pkgs/torch-bin.nix [
           (path: py-final.callPackage path {
             inherit versionOverride;
           })
@@ -143,7 +154,9 @@
 
       devShells = {};
       apps = let
-        pyi = py.withPackages (p: with p; [ pytorch-bin ]);
+        pyi = py.withPackages (p: with p; [
+          torch-bin
+        ]);
       in {
         python = { type = "app"; program = lib.getExe pyi; };
 
@@ -157,8 +170,7 @@
       packages = {
         inherit (np) hello;
 
-        inherit (py.pkgs) pytorch-bin;
-        python = py.withPackages (p: with p; [ pytorch-bin ]);
+        inherit (py.pkgs) torch-bin;
       };
       checks = {};
 
