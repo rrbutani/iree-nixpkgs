@@ -38,3 +38,52 @@ Staging ground for IREE and friends packaged with `nix`.
             ```
   3) ???
 
+
+### TODO
+
+  - [x] add an option for using custom wheels to `pytorchvision-bin`
+    + [x] test `_dyanmo`, `functorch`, `_inductor`
+  - [ ] add an option for using custom wheels to `torchvision-bin`
+  - [ ] `torchtext`
+    * See: https://github.com/NixOS/nixpkgs/pull/160207/files
+  - [ ] `torchtext-bin` with an option for using custom wheels
+  - [ ] `accelerate`
+  - [ ] `iopath`
+  - [ ] `pytorch-image-models`
+  - [ ] `huggingface_hub`
+  - [ ] `MonkeyType`
+  - [ ] ? `submitit`
+  - [ ] `torchbench`
+  - [ ] `torchbench-bin`
+
+  - [ ] llvm 15
+  - [ ] add mlir
+  - [ ] update LLVM git, add options to specify url, source, etc.
+  - [ ] `torch-mlir`
+    + requires MLIR/LLVM for source build; we should do an out-of-tree build and use `llvmPackages`
+    + should default to having the version be that corresponding to LLVM 15
+    + override the pytorchbin version to something that's compatible...
+      * make this overidable (specify the pytorch package to use)
+  - [ ] `torch-mlir-bin`
+
+  - [ ] `iree` (C++)
+    + no sense in having this use the MLIR/LLVM in nixpkgs; build isn't set up for it + `iree` uses it's own LLVM fork
+  - [ ] `iree-bin` (C++)
+    + [ ] `iree-dist`; point is to save yourself the build cost + easy override (specify version or URL outright)
+
+  - [ ] IREE python packages:
+    + [ ] `iree-compiler`
+    + [ ] `iree-runtime` / `iree-runtime-instrumented`
+      * these _can_ use `iree-run-module`/`iree-benchmark-module` from the iree package but... maybe don't bother? these aren't big binaries and not sure we can get the build sys to back off on building these anyways
+    + [ ] `iree-tools-xla`
+    + [ ] `iree-tools-tflite`
+    + [ ] `iree-tools-tf`
+    + unclear how these should interact with the C++ package, if at all..
+      * perhaps version/source should come from the `iree` package?
+  - [ ] IREE python bin packages
+    + (with version override..)
+
+  - [ ] `iree-torch` (don't bother with bin, no binary components)
+
+  - [ ] `shark`
+  - [ ] `shark-bin`
