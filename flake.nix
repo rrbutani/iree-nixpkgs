@@ -47,14 +47,6 @@
             # Note: we're *not* using the CUDA versions.
             baseUrl = "https://download.pytorch.org/whl/nightly/cpu";
 
-            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev20221104-cp39-none-macosx_11_0_arm64.whl
-            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev20221104-cp37-none-macosx_10_9_x86_64.whl
-            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev20221101%2Bcpu-cp37-cp37m-linux_x86_64.whl
-            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev20221101%2Bcpu-cp38-cp38-linux_x86_64.whl
-            #
-            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev2022104-cp310-cp310-linux_x86_64.whl
-            # https://download.pytorch.org/whl/nightly/cpu/torch-1.14.0.dev2022104%2Bcpu-cp310-cp310-linux_x86_64.whl
-
             name = { pyi, os, arch }: "torch-${version}${pyi}-${os}_${arch}.whl";
             url = args: baseUrl + "/" + (name args);
 
@@ -78,21 +70,9 @@
           in {
             inherit version;
             sources =
-              (source "x86_64" "linux" "37" "") //
-              (source "x86_64" "linux" "38" "") //
-              (source "x86_64" "linux" "39" "") //
               (source "x86_64" "linux" "310" "sha256-t8b/e4QNUF1yjQCr2c6DRZYkgVI8tNNai8uIULXr9Uc=") //
-
-              (source "x86_64" "darwin" "37" "") //
-              (source "x86_64" "darwin" "38" "") //
-              (source "x86_64" "darwin" "39" "") //
               (source "x86_64" "darwin" "310" "") //
-
-              (source "aarch64" "darwin" "37" "") //
-              (source "aarch64" "darwin" "38" "") //
-              (source "aarch64" "darwin" "39" "") //
-              (source "aarch64" "darwin" "310" "") //
-              {};
+              (source "aarch64" "darwin" "310" "");
           };
         in lib.pipe ./pkgs/pytorch-bin.nix [
           (path: py-final.callPackage path {
