@@ -248,11 +248,12 @@
       packagesSrc = packages py.pkgs { bin = false; };
       packagesBin = packages py.pkgs { bin = true; src = false; };
       packagesAll = packages py.pkgs { bin = true; src = true; };
-      pyi = bin: py.withPackages (p:
-        builtins.attrValues (packages p { bin = bin; src = !bin; })
+      pyi = bin: extras: py.withPackages (p:
+        (builtins.attrValues (packages p { bin = bin; src = !bin; }))
+          ++ (extras p)
       );
-      pyiSrc = pyi false;
-      pyiBin = pyi true;
+      pyiSrc = pyi false (_: []);
+      pyiBin = pyi true (_: []);
     in {
       # outputs keyed with `<system>`:
       devShells = {};
@@ -263,8 +264,11 @@
 
         example = {
           type = "app";
-          program = lib.getExe (
-            np.writeScriptBin "example" "${lib.getExe pyiSrc} ${./example.py}"
+          program = let
+            useSourcePackages = true;
+            interp = pyi (!useSourcePackages) (p: with p; [ requests ]);
+          in lib.getExe (
+            np.writeScriptBin "example" "${lib.getExe interp} ${./example.py}"
           );
         };
       };
