@@ -41,9 +41,13 @@ Staging ground for IREE and friends packaged with `nix`.
 
 ### TODO
 
-  - [x] add an option for using custom wheels to `pytorchvision-bin`
+  - [x] add an option for using custom wheels to `torch-bin`
     + [x] test `_dyanmo`, `functorch`, `_inductor`
+  - [x] update `torch` (source package) to build the nightly version
+    + needed for `torch-mlir` (torchlib)
   - [x] add an option for using custom wheels to `torchvision-bin`
+  - [x] update `torchvision` (source package) to build the nightly version
+    + might as well
   - [ ] `torchtext`
     * See: https://github.com/NixOS/nixpkgs/pull/160207/files
   - [ ] `torchtext-bin` with an option for using custom wheels

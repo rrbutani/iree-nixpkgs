@@ -89,6 +89,8 @@
         linux-amd64 = "sha256-iO7fZdsVwEHud2b4+p/t39en+Zc/fO6VYipdyqQaTXY=";
         macOS-aarch64 = "";
       };
+      torchvisionSha = "0199933fba3f369883c47b4c21e05bdd8d7cc9e6"; # remember to update the hash! (below)
+      torchvisionSrcHash = "sha256-7xIsHCsUNuvRe712IoaLZGByaMSAS4+14JbEG8ZkYUM=";
 
       packageOverrides = py-final: py-prev: {
         inherit (let
@@ -167,7 +169,7 @@
           inherit torch torch-bin;
         }) torch torch-bin;
 
-        # Same for `torchvision-bin`:
+        # Same for `torchvision` and `torchvision-bin`:
         # https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torchvision/bin.nix
         torchvision-bin = let
           # TODO(upstream): upstream the `versionOverride` changes
@@ -177,6 +179,21 @@
           inherit versionOverride;
         };
 
+        # https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torchvision/default.nix
+        torchvision = py-prev.torchvision.overridePythonAttrs (old: {
+          version = torchvisionVersion;
+          src = final.fetchFromGitHub {
+            owner = "pytorch";
+            repo = "vision";
+            rev = torchvisionSha;
+            hash = torchvisionSrcHash;
+            preferLocalBuild = false;
+            leaveDotGit = true; # Same as `torch` -- we want `torchvision.version.git_version` to be correct
+          };
+
+          # TODO(upstream): not sure why this is missing from the source package
+          pythonImportsCheck = [ "torchvision" ];
+        });
       };
     in {
       python37 = prev.python37.override { inherit packageOverrides; };
@@ -218,6 +235,7 @@
         }) // (lib.optionalAttrs src {
           inherit (py)
             torch
+            torchvision
           ;
         });
       packagesSrc = packages py.pkgs { bin = false; };
