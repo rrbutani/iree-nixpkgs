@@ -75,6 +75,7 @@
         inherit version;
         sources =
           (source "x86_64" "linux" "310" hashes.linux-amd64) //
+          # doesn't seem to be wheels for aarch64 linux...
           (source "x86_64" "darwin" "310" hashes.darwin-amd64) //
           (source "aarch64" "darwin" "310" hashes.darwin-aarch64);
 
@@ -216,7 +217,13 @@
       python310 = prev.python310.override { inherit packageOverrides; };
     };
 
-    sysSpecific = flu.lib.eachDefaultSystem (system: let
+    sysSpecific = with flu.lib; let
+      systems = with flu.lib.system; [
+        x86_64-linux
+        aarch64-darwin
+        # TODO: x86_64-darwin, aarch64-linux? etc.
+      ];
+    in eachSystem systems (system: let
       np = import nixpkgs {
         inherit system;
 
