@@ -1,7 +1,7 @@
 {
   description = "staging ground for IREE and friends packaged with nix";
 
-  # TODO: cachix
+  # TODO: cachix, garnix
 
   inputs = {
     flu.url = github:numtide/flake-utils;
@@ -62,35 +62,35 @@
         };
       };
 
-      torchVersion = "1.14.0.dev20221104"; # remember to update the hashes!
-      torchvisionVersion = "0.15.0.dev20221104"; # remember to update the hashes!
+      versionOverrideGen = packageName: version: hashes: let
+        inherit (pytorchWheelUrlGen { inherit packageName version; }) source;
+      in {
+        inherit version;
+        sources =
+          (source "x86_64" "linux" "310" hashes.linux-amd64) //
+          (source "x86_64" "darwin" "310" hashes.darwin-amd64) //
+          (source "aarch64" "darwin" "310" hashes.darwin-aarch64);
+
+          # omitting other python versions for now..
+      };
+
+      # See this branch: https://github.com/pytorch/pytorch/commits/nightly
+      torchVersion = "1.14.0.dev20221104"; # remember to update the hashes! (below)
+      torchBinHashes = {
+        linux-amd64 = "sha256-t8b/e4QNUF1yjQCr2c6DRZYkgVI8tNNai8uIULXr9Uc=";
+        macOS-aarch64 = "";
+      };
+
+      # See this branch: https://github.com/pytorch/vision/commits/nightly
+      torchvisionVersion = "0.15.0.dev20221104"; # remember to update the hashes! (below)
+      torchvisionBinHashes = {
+        linux-amd64 = "sha256-iO7fZdsVwEHud2b4+p/t39en+Zc/fO6VYipdyqQaTXY=";
+        macOS-aarch64 = "";
+      };
 
       packageOverrides = py-final: py-prev: {
-        # We want a specific pytorch version but don't need to add in our own
-        # patches or modifications so we just override the source of the (very
-        # convenient) bin variant of the pytorch package:
-        #
-        # See: https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torch/bin.nix
-        torch-bin = let
-          # TODO(upstream): upstream the `versionOverride` changes
-          versionOverride = let
-            version = torchVersion;
-            inherit (pytorchWheelUrlGen {
-              packageName = "torch"; inherit version;
-            }) source;
-          in {
-            inherit version;
-            sources =
-              (source "x86_64" "linux" "310" "sha256-t8b/e4QNUF1yjQCr2c6DRZYkgVI8tNNai8uIULXr9Uc=") //
-              (source "x86_64" "darwin" "310" "") //
-              (source "aarch64" "darwin" "310" "");
-          };
-        in lib.pipe ./pkgs/torch-bin.nix [
-          (path: py-final.callPackage path {
-            inherit versionOverride;
-          })
-
-          (pkg: pkg.overridePythonAttrs (old: {
+        inherit (let
+          commonOverrides = old: {
             propagatedBuildInputs = with py-final; old.propagatedBuildInputs ++ [
               networkx # new dep
               sympy # new dep
@@ -110,34 +110,41 @@
               # prefix.
               cxxCompilerPath = "${final.targetPackages.stdenv.cc}/bin/c++";
 
-              # echo "cpp.cxx = (\"$(realpath "$(which $CC)")\",) + cpp.cxx" \
             in old.postFixup + ''
               echo "cpp.cxx = (\"${cxxCompilerPath}\",) + cpp.cxx" \
                 >> $out/${py-final.python.sitePackages}/torch/_inductor/config.py
             '';
-          }))
-        ];
 
-        # Same for `torchvision`:
-        torchvision-bin = let
-          versionOverride = let
-            version = torchvisionVersion;
-            inherit (pytorchWheelUrlGen {
-              packageName = "torchvision"; inherit version;
-            }) source;
-          in {
-            inherit version;
-            sources =
-              (source "x86_64" "linux" "310" "sha256-iO7fZdsVwEHud2b4+p/t39en+Zc/fO6VYipdyqQaTXY=") //
-              (source "x86_64" "darwin" "310" "") //
-              (source "aarch64" "darwin" "310" "");
+            # Also test `functorch`, `dynamo`, and `inductor`:
+            pythonImportsCheck = old.pythonImportsCheck ++ [
+              "functorch" "torch._dynamo" "torch._inductor"
+            ];
           };
+
+          # Overrides for the binary (wheel) pytorch package:
+          #
+          # See: https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torch/bin.nix
+          torch-bin = let
+            # TODO(upstream): upstream the `versionOverride` changes
+            versionOverride = versionOverrideGen "torch" torchVersion torchBinHashes;
+          in lib.pipe ./pkgs/torch-bin.nix [
+            (path: py-final.callPackage path { inherit versionOverride; })
+            (pkg: pkg.overridePythonAttrs commonOverrides)
+          ];
+        in {
+          inherit torch-bin;
+        }) torch-bin;
+
+        # Same for `torchvision-bin`:
+        # https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torchvision/bin.nix
+        torchvision-bin = let
           # TODO(upstream): upstream the `versionOverride` changes
-        in lib.pipe ./pkgs/torchvision-bin.nix [
-          (path: py-final.callPackage path {
-            inherit versionOverride;
-          })
-        ];
+          versionOverride = versionOverrideGen
+            "torchvision" torchvisionVersion torchvisionBinHashes;
+        in py-final.callPackage ./pkgs/torchvision-bin.nix {
+          inherit versionOverride;
+        };
+
       };
     in {
       python37 = prev.python37.override { inherit packageOverrides; };
@@ -170,30 +177,43 @@
       };
 
       py = np.python310;
+      packages = py: { bin ? false, src ? true }:
+        (lib.optionalAttrs bin {
+          inherit (py)
+            torch-bin
+            torchvision-bin
+          ;
+        }) // (lib.optionalAttrs src {
+          inherit (py)
+          ;
+        });
+      packagesSrc = packages py.pkgs { bin = false; };
+      packagesBin = packages py.pkgs { bin = true; src = false; };
+      packagesAll = packages py.pkgs { bin = true; src = true; };
+      pyi = bin: py.withPackages (p:
+        builtins.attrValues (packages p { bin = bin; src = !bin; })
+      );
+      pyiSrc = pyi false;
+      pyiBin = pyi true;
     in {
       # outputs keyed with `<system>`:
-
       devShells = {};
       apps = let
-        pyi = py.withPackages (p: with p; [
-          torch-bin torchvision-bin
-
-          requests
-        ]);
       in {
-        python = { type = "app"; program = lib.getExe pyi; };
+        python = { type = "app"; program = lib.getExe pyiSrc; };
+        pythonWithBinPkgs = { type = "app"; program = lib.getExe pyiBin; };
 
         example = {
           type = "app";
           program = lib.getExe (
-            np.writeScriptBin "example" "${lib.getExe pyi} ${./example.py}"
+            np.writeScriptBin "example" "${lib.getExe pyiSrc} ${./example.py}"
           );
         };
       };
-      packages = {
+      packages = (packagesAll) // {
         inherit (np) hello;
-
-        inherit (py.pkgs) torch-bin torchvision-bin;
+        inherit pyiSrc pyiBin;
+        python = pyiSrc;
       };
       checks = {};
 
