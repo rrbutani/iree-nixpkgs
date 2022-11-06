@@ -80,6 +80,8 @@
         linux-amd64 = "sha256-t8b/e4QNUF1yjQCr2c6DRZYkgVI8tNNai8uIULXr9Uc=";
         macOS-aarch64 = "";
       };
+      torchSha = "4ebaafab95b322407a424e157b55f4c4802e8cc4"; # remember to update the hash! (below)
+      torchSrcHash = "sha256-B5qB6Vp+g04R+5g9jCwhNvrIZ0v973SkXlkUgP+E8KB=";
 
       # See this branch: https://github.com/pytorch/vision/commits/nightly
       torchvisionVersion = "0.15.0.dev20221104"; # remember to update the hashes! (below)
@@ -131,9 +133,39 @@
             (path: py-final.callPackage path { inherit versionOverride; })
             (pkg: pkg.overridePythonAttrs commonOverrides)
           ];
+
+          # `torch-mlir` needs the pytorch library output so: we build pytorch
+          # from source too:
+          #
+          # https://github.com/nixos/nixpkgs/blob/master/pkgs/development/python-modules/torch/default.nix
+          torch = py-prev.torch.overridePythonAttrs (old: (commonOverrides old) // {
+            version = torchVersion;
+
+            src = final.fetchFromGitHub {
+              owner = "pytorch";
+              repo = "pytorch";
+              fetchSubmodules = true;
+              rev = torchSha;
+              hash = torchSrcHash;
+              preferLocalBuild = false;
+
+              # Note: the `git_version` that pytorch picks up won't be set right
+              # if `.git` isn't present so: we leave in `.git`.
+              #
+              # See: https://github.com/pytorch/pytorch/blob/093e22083613dd4b92c1ced20201edf713484a23/tools/generate_torch_version.py#L15
+              leaveDotGit = true; # TODO: not hi-priority but this didn't actually work...
+            };
+
+            # TODO(upstream): we (nixpkgs) don't need to set this anymore; it's
+            # no longer hardcoded in setup.py.
+            #
+            # This is set this here to _override_ this value from the torch
+            # nixpkg.
+            PYTORCH_BUILD_VERSION = torchVersion;
+          });
         in {
-          inherit torch-bin;
-        }) torch-bin;
+          inherit torch torch-bin;
+        }) torch torch-bin;
 
         # Same for `torchvision-bin`:
         # https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torchvision/bin.nix
@@ -185,6 +217,7 @@
           ;
         }) // (lib.optionalAttrs src {
           inherit (py)
+            torch
           ;
         });
       packagesSrc = packages py.pkgs { bin = false; };
