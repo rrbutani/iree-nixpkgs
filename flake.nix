@@ -155,8 +155,12 @@
               # if `.git` isn't present so: we leave in `.git`.
               #
               # See: https://github.com/pytorch/pytorch/blob/093e22083613dd4b92c1ced20201edf713484a23/tools/generate_torch_version.py#L15
-              leaveDotGit = true; # TODO: not hi-priority but this didn't actually work...
+              leaveDotGit = true;
             };
+
+            # In addition to leaving in `.git` we need to provide `git` so that
+            # the pytorch build can pick up the git SHA.
+            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ final.git ];
 
             # TODO(upstream): we (nixpkgs) don't need to set this anymore; it's
             # no longer hardcoded in setup.py.
@@ -190,6 +194,9 @@
             preferLocalBuild = false;
             leaveDotGit = true; # Same as `torch` -- we want `torchvision.version.git_version` to be correct
           };
+
+          # See the `torch` derivation.
+          nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ final.git ];
 
           # TODO(upstream): not sure why this is missing from the source package
           pythonImportsCheck = [ "torchvision" ];
