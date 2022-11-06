@@ -52,14 +52,16 @@ op(torch.randn(128, 8192), torch.randn(128, 8192), torch.randn(8192, 128))
 import requests
 
 def get_date_from_gh_commit(owner: str, repo: str, commit: str) -> Tuple[str, str]:
-    resp = requests.get(
-        f"https://api.github.com/repos/{owner}/{repo}/commits/{commit}",
-        headers = {
-            "Accept": "application/vnd.github+json"
-        },
-    ).json()
+    date = "Unknown"
+    if commit != "Unknown":
+        resp = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/commits/{commit}",
+            headers = {
+                "Accept": "application/vnd.github+json"
+            },
+        ).json()
 
-    date = resp["commit"]["committer"]["date"]
+        date = resp["commit"]["committer"]["date"]
 
     print(f"{owner}/{repo} @ {commit} -> {date}")
     print(f"   - https://github.com/{owner}/{repo}/commit/{commit}")
