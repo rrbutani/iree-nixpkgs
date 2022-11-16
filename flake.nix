@@ -147,6 +147,20 @@
               #
               # See: https://github.com/pytorch/pytorch/blob/093e22083613dd4b92c1ced20201edf713484a23/tools/generate_torch_version.py#L15
               leaveDotGit = true;
+
+              # Note: with `leaveDotGit`, the hash is not stable: https://github.com/NixOS/nixpkgs/issues/8567
+              #
+              # So, we delete everything that isn't needed by
+              # `git rev-parse HEAD` so eliminate sources of non-determinism:
+              branchName = "main"; # don't want to rely on the default of `fetchgit` not changing..
+              postFetch = ''
+                mkdir -p $out/.git2
+                cp -R $out/.git/{HEAD,packed-refs} $out/.git2
+                rm -rf $out/.git
+                mv $out/.git2 $out/.git
+
+                mkdir -p $out/.git/{objects,refs}
+              '';
             };
 
             # In addition to leaving in `.git` we need to provide `git` so that

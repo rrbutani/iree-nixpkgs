@@ -11,7 +11,7 @@
     macOS-aarch64 = "";
   };
   torchSha = "b7c4176df3a734ad040c604c500d1a57e12d9083"; # !!! remember to update the hash! (below)
-  torchSrcHash = "sha256-HdaqRoOHmJiLonXSFdYYN6ucoRIuxuSW/2UbEH/Vpko=";
+  torchSrcHash = "sha256-aE9nOxg70Z9hLFOAgntKSqIXftt9f4Vi/iigmS4sH8k=";
 
   # See this branch: https://github.com/pytorch/vision/commits/nightly
   torchvisionVersion = "0.15.0.dev20221114"; # !!! remember to update the hashes! (below)
