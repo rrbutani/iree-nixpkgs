@@ -219,6 +219,33 @@
       python310 = prev.python310.override { inherit packageOverrides; };
     };
 
+    llvmOverrides = final: prev: let
+    in {
+      clang_15 = final.llvmPackages_15.clang;
+      clang-tools_15 = final.clang-tools_14.override {
+        llvmPackages = final.llvmPackages_15;
+      };
+      lld_15 = final.llvmPackages_15.lld;
+      lldb_15 = final.llvmPackages_15.lldb;
+      llvm_15 = final.llvmPackages_15.llvm;
+      llvmPackages_15 = lib.recurseIntoAttrs (final.callPackage ./pkgs/llvm/15 ({
+        inherit (final.stdenvAdapters) overrideCC;
+        buildLlvmTools = final.buildPackages.llvmPackages_15.tools;
+        targetLlvmLibraries = final.targetPackages.llvmPackages_15.libraries
+          or final.llvmPackages_15.libraries;
+      } // lib.optionalAttrs
+          (final.stdenv.hostPlatform.isi686 &&
+            final.stdenv.hostPlatform == final.stdenv.buildPlatform &&
+            final.buildPackages.stdenv.cc.isGNU)
+        { stdenv = final.gcc7Stdenv; }
+      ));
+
+      python37 = prev.python37.override { inherit packageOverrides; };
+      python38 = prev.python38.override { inherit packageOverrides; };
+      python39 = prev.python39.override { inherit packageOverrides; };
+      python310 = prev.python310.override { inherit packageOverrides; };
+    };
+
     sysSpecific = with flu.lib; let
       systems = with flu.lib.system; [
         x86_64-linux
@@ -233,6 +260,7 @@
           bazelUtilsOverlay
           ccachedStdenvOverlay
           pythonPackageOverrides
+          llvmOverrides
         ];
 
         # broken:
@@ -290,8 +318,11 @@
       };
       packages = (packagesAll) // {
         inherit (np) hello;
+
         inherit pyiSrc pyiBin;
         python = pyiSrc;
+
+        inherit (np) llvm_15;
       };
       checks = {};
 
