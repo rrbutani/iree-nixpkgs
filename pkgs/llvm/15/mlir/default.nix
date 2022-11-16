@@ -7,7 +7,6 @@
 
 # TODO: python bindings
 , enablePython ? true
-, pythonPackages ? null
 
 , enableDocs ? true # TODO: share/doc
 , doxygen
@@ -32,8 +31,6 @@
 #  - [ ] tests
 #  - [ ] vscode-extension
 
-assert enablePython -> pythonPackages != null;
-
 let
   # # List of runners to build, native-only
   # runners = lib.optionals enableRunners ([
@@ -48,11 +45,10 @@ let
 
   # TODO: is ^ required?
 
-  python = if enablePython then pythonPackages.python else python3;
-
-  pythonRuntimeDeps = with pythonPackages; [
-    pythonPackages.numpy
-    pythonPackages.pyyaml
+  pyPkgs = python3.pkgs;
+  pythonRuntimeDeps = with pyPkgs; [
+    numpy
+    pyyaml
   ];
 in let mlir = stdenv.mkDerivation rec {
   pname = "mlir";
@@ -85,8 +81,8 @@ in let mlir = stdenv.mkDerivation rec {
     ++ (lib.optional enableDocs "doc"); # TODO
 
   nativeBuildInputs = [
-    cmake ninja python
-  ] ++ lib.optionals enablePython ([ pythonPackages.pybind11 ]
+    cmake ninja python3
+  ] ++ lib.optionals enablePython ([ pyPkgs.pybind11 ]
     # Note: we're putting these "runtime" deps here instead of in
     # `propagatedBuildInputs` because we do not actually want these to be
     # propagated on this derivation (see `passthru.python-bindings` below).
@@ -110,7 +106,7 @@ in let mlir = stdenv.mkDerivation rec {
     "-DMLIR_ENABLE_BINDINGS_PYTHON=${if enablePython then "ON" else "OFF"}"
     "-DMLIR_INCLUDE_DOCS=${if enableDocs then "ON" else "OFF"}"
   ] ++ lib.optionals enablePython [
-    "-DPython3_EXECUTABLE=${lib.getExe python}" # https://mlir.llvm.org/docs/Bindings/Python/#cmake-variables
+    "-DPython3_EXECUTABLE=${lib.getExe python3}" # https://mlir.llvm.org/docs/Bindings/Python/#cmake-variables
     "-DMLIR_PYTHON_INSTALL_DIR=${placeholder "python"}" # See ./patch-python-install-location.patch
   ] ++ lib.optionals enableDocs [
     "-DLLVM_ENABLE_DOXYGEN=ON"
@@ -192,14 +188,14 @@ in let mlir = stdenv.mkDerivation rec {
       inherit version;
 
       # TODO: fix this bit; doesn't get picked up?
-      disabled = pythonPackages.pythonOlder "3.6"; # https://llvm.org/docs/GettingStarted.html#requirements
+      disabled = python3.pythonOlder "3.6"; # https://llvm.org/docs/GettingStarted.html#requirements
 
-      nativeBuildInputs = [ python ];
+      nativeBuildInputs = [ python3 ];
       propagatedBuildInputs = pythonRuntimeDeps;
 
       unpackPhase = "true";
       installPhase = ''
-        installDir="$out/lib/python${python.pythonVersion}/site-packages/"
+        installDir="$out/lib/python${python3.pythonVersion}/site-packages/"
 
         mkdir -p "$installDir"
         ln -s "${mlir.python}/python_packages/mlir_core/mlir" "$installDir/mlir"
@@ -224,7 +220,7 @@ in let mlir = stdenv.mkDerivation rec {
         allowSubstitutes = true;
 
         nativeBuildInputs = [
-          (pythonPackages.toPythonModule python-bindings)
+          (pyPkgs.toPythonModule python-bindings)
         ];
       } ''
         python3 ${script} &> $out

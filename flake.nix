@@ -233,8 +233,8 @@
       mlirPyPackageOverride = { final, prev }:
         py-final: py-prev: {
           mlir = py-final.toPythonModule (final.mlir_15.override {
+            python3 = py-final.python;
             enablePython = true;
-            pythonPackages = self;
           }).python-bindings;
 
         };

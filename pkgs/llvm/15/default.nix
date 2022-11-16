@@ -180,7 +180,6 @@ in let
 
     mlir = callPackage ./mlir {
       inherit llvm_meta;
-      pythonPackages = python3.pkgs;
     };
 
     # mlir-python = mlir.python-bindings;
