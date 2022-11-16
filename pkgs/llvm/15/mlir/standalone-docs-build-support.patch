@@ -1,0 +1,23 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -30,6 +30,10 @@ if(MLIR_STANDALONE_BUILD)
+   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+     "${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
+   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
++
++  if (LLVM_BUILD_DOCS)
++    add_custom_target(doxygen ALL)
++  endif()
+ endif()
+ 
+ set(MLIR_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
+diff --git a/mlir/docs/CMakeLists.txt b/mlir/docs/CMakeLists.txt
+--- a/docs/CMakeLists.txt
++++ b/docs/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-
++find_package(Doxygen)
+ if (DOXYGEN_FOUND)
+ if (LLVM_ENABLE_DOXYGEN)
+   set(abs_top_srcdir ${CMAKE_CURRENT_SOURCE_DIR})

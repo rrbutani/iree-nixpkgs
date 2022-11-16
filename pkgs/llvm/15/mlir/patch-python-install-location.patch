@@ -1,0 +1,53 @@
+diff --git a/mlir/CMakeLists.txt b/mlir/CMakeLists.txt
+index f84591c7c8df..fc6d621ffb93 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -48,6 +48,10 @@ set(MLIR_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
+ set(MLIR_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+ set(MLIR_TOOLS_DIR   ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+ 
++option(MLIR_PYTHON_INSTALL_DIR  "Python binding install path" "")
++# ^ is the install location for the python bindings; this will be set to the
++# path of the python output via CMake flag by the MLIR nixpkg
++
+ if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+ endif()
+diff --git a/mlir/cmake/modules/AddMLIRPython.cmake b/mlir/cmake/modules/AddMLIRPython.cmake
+index 443d9a5c2be9..d6d01fa7e8b7 100644
+--- a/cmake/modules/AddMLIRPython.cmake
++++ b/cmake/modules/AddMLIRPython.cmake
+@@ -391,7 +391,7 @@ function(mlir_python_setup_extension_rpath target)
+ 
+   set(_origin_prefix "\$ORIGIN")
+   if(APPLE)
+-    set(_origin_prefix "@loader_path")
++    set(_origin_prefix "@loader_path") # TODO: ...
+   endif()
+   set_target_properties(${target} PROPERTIES
+     BUILD_WITH_INSTALL_RPATH OFF
+diff --git a/mlir/python/CMakeLists.txt b/mlir/python/CMakeLists.txt
+index 7eb6e05e427c..ebec1cd99b52 100644
+--- a/python/CMakeLists.txt
++++ b/python/CMakeLists.txt
+@@ -472,9 +472,9 @@ endif()
+ 
+ add_mlir_python_common_capi_library(MLIRPythonCAPI
+   INSTALL_COMPONENT MLIRPythonModules
+-  INSTALL_DESTINATION python_packages/mlir_core/mlir/_mlir_libs
++  INSTALL_DESTINATION "${MLIR_PYTHON_INSTALL_DIR}/python_packages/mlir_core/mlir/_mlir_libs"
+   OUTPUT_DIRECTORY "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir/_mlir_libs"
+-  RELATIVE_INSTALL_ROOT "../../../.."
++  RELATIVE_INSTALL_ROOT "../../../../lib" # we produce this symlink in postInstall
+   DECLARED_HEADERS
+     MLIRPythonCAPI.HeaderSources
+   DECLARED_SOURCES
+@@ -490,7 +490,7 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
+ 
+ add_mlir_python_modules(MLIRPythonModules
+   ROOT_PREFIX "${MLIR_BINARY_DIR}/python_packages/mlir_core/mlir"
+-  INSTALL_PREFIX "python_packages/mlir_core/mlir"
++  INSTALL_PREFIX "${MLIR_PYTHON_INSTALL_DIR}/python_packages/mlir_core/mlir"
+   DECLARED_SOURCES
+     MLIRPythonSources
+     MLIRPythonExtension.RegisterEverything

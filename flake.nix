@@ -220,6 +220,16 @@
     };
 
     llvmOverrides = final: prev: let
+      mlirPyPackageOverride = { final, prev }:
+        py-final: py-prev: {
+          mlir = py-final.toPythonModule (final.mlir_15.override {
+            enablePython = true;
+            pythonPackages = self;
+          }).python-bindings;
+
+        };
+
+      packageOverrides = mlirPyPackageOverride { inherit final prev; };
     in {
       clang_15 = final.llvmPackages_15.clang;
       clang-tools_15 = final.clang-tools_14.override {
@@ -228,6 +238,7 @@
       lld_15 = final.llvmPackages_15.lld;
       lldb_15 = final.llvmPackages_15.lldb;
       llvm_15 = final.llvmPackages_15.llvm;
+      mlir_15 = final.llvmPackages_15.mlir;
       llvmPackages_15 = lib.recurseIntoAttrs (final.callPackage ./pkgs/llvm/15 ({
         inherit (final.stdenvAdapters) overrideCC;
         buildLlvmTools = final.buildPackages.llvmPackages_15.tools;
@@ -323,7 +334,7 @@
         inherit pyiSrc pyiBin;
         python = pyiSrc;
 
-        inherit (np) llvm_15;
+        inherit (np) llvm_15 mlir_15;
       };
       checks = {};
 
