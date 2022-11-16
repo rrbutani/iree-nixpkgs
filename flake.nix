@@ -17,6 +17,7 @@
 
   outputs = { self, flu, nixpkgs }: let
     lib = nixpkgs.lib;
+    versions = import ./versions.nix;
 
     bazelUtilsOverlay = final: prev: rec {
       bazelDiskCacheAdapter = final.callPackage ./util/bazel-with-cache.nix {};
@@ -82,24 +83,6 @@
           # omitting other python versions for now..
       };
 
-      # See this branch: https://github.com/pytorch/pytorch/commits/nightly
-      torchVersion = "1.14.0.dev20221104"; # remember to update the hashes! (below)
-      torchBinHashes = {
-        linux-amd64 = "sha256-t8b/e4QNUF1yjQCr2c6DRZYkgVI8tNNai8uIULXr9Uc=";
-        macOS-aarch64 = "";
-      };
-      torchSha = "4ebaafab95b322407a424e157b55f4c4802e8cc4"; # remember to update the hash! (below)
-      torchSrcHash = "sha256-B5qB6Vp+g04R+5g9jCwhNvrIZ0v973SkXlkUgP+E8KB=";
-
-      # See this branch: https://github.com/pytorch/vision/commits/nightly
-      torchvisionVersion = "0.15.0.dev20221104"; # remember to update the hashes! (below)
-      torchvisionBinHashes = {
-        linux-amd64 = "sha256-iO7fZdsVwEHud2b4+p/t39en+Zc/fO6VYipdyqQaTXY=";
-        macOS-aarch64 = "";
-      };
-      torchvisionSha = "0199933fba3f369883c47b4c21e05bdd8d7cc9e6"; # remember to update the hash! (below)
-      torchvisionSrcHash = "sha256-7xIsHCsUNuvRe712IoaLZGByaMSAS4+14JbEG8ZkYUM=";
-
       packageOverrides = py-final: py-prev: {
         inherit (let
           commonOverrides = old: {
@@ -136,7 +119,7 @@
           # Overrides for the binary (wheel) pytorch package:
           #
           # See: https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torch/bin.nix
-          torch-bin = let
+          torch-bin = with versions; let
             # TODO(upstream): upstream the `versionOverride` changes
             versionOverride = versionOverrideGen "torch" torchVersion torchBinHashes;
           in lib.pipe ./pkgs/torch-bin.nix [
@@ -148,7 +131,7 @@
           # from source too:
           #
           # https://github.com/nixos/nixpkgs/blob/master/pkgs/development/python-modules/torch/default.nix
-          torch = py-prev.torch.overridePythonAttrs (old: (commonOverrides old) // {
+          torch = with versions; py-prev.torch.overridePythonAttrs (old: (commonOverrides old) // {
             version = torchVersion;
 
             src = final.fetchFromGitHub {
@@ -183,7 +166,7 @@
 
         # Same for `torchvision` and `torchvision-bin`:
         # https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torchvision/bin.nix
-        torchvision-bin = let
+        torchvision-bin = with versions; let
           # TODO(upstream): upstream the `versionOverride` changes
           versionOverride = versionOverrideGen
             "torchvision" torchvisionVersion torchvisionBinHashes;
@@ -192,7 +175,7 @@
         };
 
         # https://github.com/NixOS/nixpkgs/blob/9d556e2c7568cd2b84446618f635f8b3bcc19a2f/pkgs/development/python-modules/torchvision/default.nix
-        torchvision = py-prev.torchvision.overridePythonAttrs (old: {
+        torchvision = with versions; py-prev.torchvision.overridePythonAttrs (old: {
           version = torchvisionVersion;
           src = final.fetchFromGitHub {
             owner = "pytorch";
