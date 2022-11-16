@@ -154,12 +154,17 @@
               # `git rev-parse HEAD` so eliminate sources of non-determinism:
               branchName = "main"; # don't want to rely on the default of `fetchgit` not changing..
               postFetch = ''
+                # keep "HEAD" and "packed-refs", delete everything else:
                 mkdir -p $out/.git2
                 cp -R $out/.git/{HEAD,packed-refs} $out/.git2
                 rm -rf $out/.git
-                mv $out/.git2 $out/.git
 
-                mkdir -p $out/.git/{objects,refs}
+                # delete all other git directories (submodules):
+                find $out -iname .git | xargs rm -rf
+
+                # move our git directory back into place
+                mv $out/.git2 $out/.git
+                mkdir -p $out/.git/{objects,refs} # stubs to make git happy
               '';
             };
 
