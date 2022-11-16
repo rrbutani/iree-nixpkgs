@@ -246,6 +246,12 @@
       python310 = prev.python310.override { inherit packageOverrides; };
     };
 
+    overlays = {
+      inherit
+        bazelUtilsOverlay ccachedStdenvOverlay pythonPackageOverrides
+        llvmOverrides;
+    };
+
     sysSpecific = with flu.lib; let
       systems = with flu.lib.system; [
         x86_64-linux
@@ -256,12 +262,7 @@
       np = import nixpkgs {
         inherit system;
 
-        overlays = [
-          bazelUtilsOverlay
-          ccachedStdenvOverlay
-          pythonPackageOverrides
-          llvmOverrides
-        ];
+        overlays = builtins.attrValues overlays;
 
         # broken:
         #  - some autoconf tests don't work (c-ares)
@@ -336,9 +337,7 @@
         bazelDiskCacheAdapter = import ./util/bazel-with-cache.nix;
       };
 
-      overlays = {
-        inherit bazelUtilsOverlay ccachedStdenvOverlay pythonPackageOverrides;
-      };
+      inherit overlays;
     };
   in lib.recursiveUpdate sysSpecific sysIndep;
 }
