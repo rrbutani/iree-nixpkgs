@@ -341,7 +341,8 @@
         inherit pyiSrc pyiBin;
         python = pyiSrc;
 
-        inherit (np) llvm_15 mlir_15;
+        inherit (np) llvm_15 mlir_15 clang_15;
+        llvm15Stdenv = np.llvmPackages_15.libcxxStdenv;
       };
       checks = {};
 
