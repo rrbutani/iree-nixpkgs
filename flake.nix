@@ -178,6 +178,17 @@
             # This is set this here to _override_ this value from the torch
             # nixpkg.
             PYTORCH_BUILD_VERSION = torchVersion;
+
+            # TODO(upstream): not sure how this didn't make hydra fail...
+            # https://github.com/NixOS/nixpkgs/blob/f5124bf028e437e69e8ad3c24972747fcb3f0666/pkgs/development/python-modules/torch/default.nix#L229
+            # https://github.com/NixOS/nixpkgs/pull/196571
+            buildInputs = if (!final.stdenv.isLinux)
+              then
+                builtins.filter
+                  (x: (x.pname or "") != "linux-headers")
+                  old.buildInputs
+              else
+                old.buildInputs;
           });
         in {
           inherit torch torch-bin;
