@@ -224,10 +224,9 @@
         });
       };
     in {
-      python37 = prev.python37.override { inherit packageOverrides; };
-      python38 = prev.python38.override { inherit packageOverrides; };
-      python39 = prev.python39.override { inherit packageOverrides; };
-      python310 = prev.python310.override { inherit packageOverrides; };
+      pythonPackagesExtensions = prev.pythonPackagesExtensions or [] ++ [
+        packageOverrides
+      ];
     };
 
     llvmOverrides = final: prev: let
@@ -239,8 +238,6 @@
           }).python-bindings;
 
         };
-
-      packageOverrides = mlirPyPackageOverride { inherit final prev; };
     in {
       clang_15 = final.llvmPackages_15.clang;
       clang-tools_15 = final.clang-tools_14.override {
@@ -262,10 +259,9 @@
         { stdenv = final.gcc7Stdenv; }
       ));
 
-      python37 = prev.python37.override { inherit packageOverrides; };
-      python38 = prev.python38.override { inherit packageOverrides; };
-      python39 = prev.python39.override { inherit packageOverrides; };
-      python310 = prev.python310.override { inherit packageOverrides; };
+      pythonPackagesExtensions = prev.pythonPackagesExtensions or [] ++ [
+        (mlirPyPackageOverride { inherit final prev; })
+      ];
     };
 
     overlays = {
