@@ -76,7 +76,7 @@ in buildPythonPackage {
     # https://www.intel.com/content/www/us/en/developer/articles/license/onemkl-license-faq.html
     license = licenses.bsd3;
     sourceProvenance = with sourceTypes; [ binaryNativeCode ];
-    platforms = platforms.linux;
+    platforms = with platforms; linux ++ darwin; # TODO: update binary hashes file to match..
     maintainers = with maintainers; [ junjihashimoto ];
   };
 }
